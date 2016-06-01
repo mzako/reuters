@@ -5,8 +5,8 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import pl.wedt.reuters.model.DocumentRaw;
-import pl.wedt.reuters.utils.Category;
 import pl.wedt.reuters.model.DocumentType;
+import pl.wedt.reuters.utils.Category;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;

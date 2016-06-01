@@ -1,7 +1,5 @@
 package pl.wedt.reuters.model;
 
-import java.util.List;
-
 /**
  * @author Michał Żakowski
  *
@@ -11,10 +9,26 @@ public class DocumentFiltered {
     private DocumentType documentType;
     private CategoryType categoryType;
     private Integer category;
-    private List<Integer> vector;
+    private double vector[];
+
+    public DocumentType getDocumentType() {
+        return documentType;
+    }
+
+    public CategoryType getCategoryType() {
+        return categoryType;
+    }
+
+    public Integer getCategory() {
+        return category;
+    }
+
+    public double[] getVector() {
+        return vector;
+    }
 
     public DocumentFiltered(DocumentType documentType, CategoryType categoryType, Integer category,
-                            List<Integer> vector) {
+                            double[] vector) {
         this.documentType = documentType;
         this.categoryType = categoryType;
         this.category = category;
