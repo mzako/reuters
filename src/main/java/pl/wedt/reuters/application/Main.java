@@ -1,11 +1,16 @@
 package pl.wedt.reuters.application;
 
 import org.apache.log4j.Logger;
+import pl.wedt.reuters.classifier.SVM;
+import pl.wedt.reuters.model.CategoryType;
 import pl.wedt.reuters.service.DocumentService;
 import pl.wedt.reuters.utils.Category;
+import pl.wedt.reuters.utils.PropertiesLoader;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 import java.util.stream.IntStream;
 
 
@@ -17,11 +22,16 @@ import java.util.stream.IntStream;
 
 public class Main {
     private final static Logger logger = Logger.getLogger(Main.class);
-    private final static Integer DOCUMENT_NUMBER = 22;
+    private final static Integer DOCUMENT_NUMBER = 2;
 
     public static void main(String [] args) {
         String resourcesPath = Main.class.getClassLoader().getResource("reuters21578").getPath();
+        long startTime = System.nanoTime();
+
         try {
+            Properties properties =
+                    new PropertiesLoader(Main.class.getClassLoader().getResource("app.properties").getPath())
+                        .getProperties();
             Category.loadData(resourcesPath);
 
             List<String> documentNames = new ArrayList<>();
@@ -34,8 +44,14 @@ public class Main {
             documentService.loadDocuments();
             logger.info("Przetwarzanie dokumentów");
             documentService.prepareDocuments();
+            logger.info("Klasyfikacja SVM");
+            SVM svm = new SVM(documentService, Double.valueOf(properties.getProperty("svm.C")),
+                    Double.valueOf(properties.getProperty("svm.eps")));
+            svm.classify2(CategoryType.PLACES, Arrays.asList(161, 158));
         } catch(Exception e) {
             e.printStackTrace();
         }
+
+        logger.info("Czas działania: " + (System.nanoTime() - startTime)/1000000000.0);
     }
 }

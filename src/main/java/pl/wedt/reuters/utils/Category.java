@@ -1,5 +1,7 @@
 package pl.wedt.reuters.utils;
 
+import pl.wedt.reuters.model.CategoryType;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -45,5 +47,22 @@ public class Category {
     		path = path.substring(1); 
         List<String> names = Files.readAllLines(Paths.get(path, filename));
         IntStream.range(0, names.size()).forEach(i -> map.put(names.get(i), i));
+    }
+
+    public static Map<String, Integer> getMapByCategoryType(CategoryType categoryType) {
+        switch(categoryType) {
+            case EXCHANGES:
+                return EXCHANGES;
+            case ORGS:
+                return ORGS;
+            case PEOPLE:
+                return PEOPLE;
+            case PLACES:
+                return PLACES;
+            case TOPICS:
+                return TOPICS;
+        }
+
+        return null;
     }
 }
