@@ -32,6 +32,8 @@ public class DocumentService {
     Map<CategoryType, List<DocumentFiltered>> documentFilteredMap;
 
     public DocumentService(String resourcesPath, List<String> documentFileNames, String stopListFileName) {
+    	if (resourcesPath != null && resourcesPath.startsWith("/")) 
+    		resourcesPath = resourcesPath.substring(1); 
         this.resourcesPath = resourcesPath;
         this.documentFileNames = documentFileNames;
         this.parser = new Parser();

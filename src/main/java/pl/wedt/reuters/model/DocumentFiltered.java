@@ -20,4 +20,20 @@ public class DocumentFiltered {
         this.category = category;
         this.vector = vector;
     }
+
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("DocumentFiltered [documentType=");
+		builder.append(documentType);
+		builder.append(", categoryType=");
+		builder.append(categoryType);
+		builder.append(", category=");
+		builder.append(category);
+		builder.append(", vector=");
+		builder.append(vector);
+		builder.append("]");
+		return builder.toString();
+	}
+    
 }
