@@ -10,6 +10,7 @@ public class DocumentFiltered {
     private CategoryType categoryType;
     private Integer category;
     private double vector[];
+    private int featurePosition[];
 
     public DocumentType getDocumentType() {
         return documentType;
@@ -28,10 +29,15 @@ public class DocumentFiltered {
     }
 
     public DocumentFiltered(DocumentType documentType, CategoryType categoryType, Integer category,
-                            double[] vector) {
+                            double[] vector, int featurePosition[]) {
         this.documentType = documentType;
         this.categoryType = categoryType;
         this.category = category;
         this.vector = vector;
+        this.featurePosition = featurePosition;
+    }
+
+    public int[] getFeaturePosition() {
+        return featurePosition;
     }
 }

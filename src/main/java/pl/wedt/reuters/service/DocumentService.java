@@ -7,29 +7,31 @@ import pl.wedt.reuters.model.CategoryType;
 import pl.wedt.reuters.model.DocumentFiltered;
 import pl.wedt.reuters.model.DocumentRaw;
 import pl.wedt.reuters.parser.Parser;
+import pl.wedt.reuters.parser.Porter;
 import pl.wedt.reuters.parser.StopListFilter;
-import pl.wedt.reuters.parser.Tokenizer;
 
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
  * @author Michał Żakowski
- *         <p>
- *         Klasa do zarządzania dokumentami
+ *
+ * Klasa do zarządzania dokumentami
  */
 public class DocumentService {
     private final Logger logger = Logger.getLogger(DocumentService.class);
 
     private Parser parser;
-    private Tokenizer tokenizer;
+    private Porter tokenizer;
     private StopListFilter stopListFilter;
     private String resourcesPath;
     private List<String> documentFileNames;
     private List<String> dictionaryVector;
     private List<DocumentRaw> documentRawList;
     private Map<CategoryType, List<DocumentFiltered>> documentFilteredMap;
+    private int dim;
 
     public Map<CategoryType, List<DocumentFiltered>> getDocumentFilteredMap() {
         return documentFilteredMap;
@@ -39,8 +41,12 @@ public class DocumentService {
         this.resourcesPath = resourcesPath;
         this.documentFileNames = documentFileNames;
         this.parser = new Parser();
-        this.tokenizer = new Tokenizer();
+        this.tokenizer = new Porter();
         this.stopListFilter = new StopListFilter(Paths.get(resourcesPath, stopListFileName));
+    }
+
+    public int getDim() {
+        return dim;
     }
 
     //wczytuje dokumenty w postaci nieprzetworzonej
@@ -59,9 +65,11 @@ public class DocumentService {
         logger.info("Tworzenie słownika");
         documentRawList.stream().forEach(i -> {
             //rozbij na słowa i zamień na lemmy
-            List<String> tokens = tokenizer.tokenize(i.getBody());
+            List<String> tokens = tokenizer.compute(i.getBody());
             //filtrowanie wg stop listy
             tokens = stopListFilter.filter(tokens);
+            //zamiana na małe litery
+            tokens = tokens.stream().map(t -> t.toLowerCase()).collect(Collectors.toList());
             //tworzenie bag of words dokumentu
             Multiset bagOfWords = HashMultiset.create();
             tokens.stream().forEach(token -> bagOfWords.add(token));
@@ -70,28 +78,11 @@ public class DocumentService {
             dictionary.addAll(tokens);
         });
 
-        //usuwanie ze słownika słów, które występują tylko w jednym dokumencie
-        logger.info("Usuwanie zbędnych słów ze słownika");
-        int threshold = 1;
-        for (Iterator<String> iterator = dictionary.iterator(); iterator.hasNext(); ) {
-            int nrDocs = 0;
-            String word = iterator.next();
-            for (Multiset<String> bag : documentBodyBagOfWordsList) {
-                if (bag.contains(word)) {
-                    nrDocs = nrDocs + 1;
-                    if (nrDocs > threshold) {
-                        break;
-                    }
-                }
-            }
-            if (nrDocs <= threshold) {
-                iterator.remove();
-            }
-        }
-
         //tworzenie wektora słownikowego, każda pozycja odpowiada jednemu słowu
         dictionaryVector = new ArrayList<>();
         dictionaryVector.addAll(dictionary);
+        dim = dictionaryVector.size();
+        logger.info("Wielkość słownika - " + dim);
 
         //tworzenie oddzielnych list dokumentów dla każdego typu kategorii
         documentFilteredMap = new HashMap<>();
@@ -99,34 +90,23 @@ public class DocumentService {
 
         logger.info("Normalizacja wektorów częstości");
         //tworzenie wektorów częstości
-        double documentVectorList[][] = new double[documentBodyBagOfWordsList.size()][dictionaryVector.size()];
+        double documentVectorList[][] = new double[documentBodyBagOfWordsList.size()][];
+        int featurePositionList[][] = new int[documentBodyBagOfWordsList.size()][];
+
         IntStream.range(0, documentVectorList.length).forEach(i -> {
             //tworzenie wektora częstości słów dla dokumentu
-            IntStream.range(0, dictionaryVector.size()).forEach(j -> {
-                documentVectorList[i][j] = documentBodyBagOfWordsList.get(i).count(dictionaryVector.get(j));
-            });
-        });
-
-        //standaryzacja wektorów
-        double mean[] = new double[dictionaryVector.size()];
-        double std[] = new double[dictionaryVector.size()];
-        Arrays.stream(documentVectorList).forEach(d -> {
-            IntStream.range(0, d.length).forEach(i -> mean[i] += d[i]);
-        });
-        IntStream.range(0, mean.length).forEach(i -> mean[i] /= documentVectorList.length);
-
-        Arrays.stream(documentVectorList).forEach(d -> {
-            IntStream.range(0, d.length).forEach(i -> {
-                double diff = d[i] - mean[i];
-                std[i] += diff * diff;
-            });
-        });
-        IntStream.range(0, std.length).forEach(i -> std[i] = Math.sqrt(std[i] / documentVectorList.length));
-
-        Arrays.stream(documentVectorList).forEach(d -> {
-            IntStream.range(0, d.length).forEach(i -> {
-                d[i] = (d[i] - mean[i]) / std[i];
-            });
+            Multiset<String> bagOfWords = documentBodyBagOfWordsList.get(i);
+            int nonZeros = (int)dictionaryVector.stream().filter(w -> bagOfWords.count(w) != 0).count();
+            documentVectorList[i] = new double[nonZeros];
+            featurePositionList[i] = new int[nonZeros];
+            int pos = 0;
+            for(int j = 0; j < dictionaryVector.size(); j++) {
+                int count = bagOfWords.count(dictionaryVector.get(j));
+                if(count != 0) {
+                    featurePositionList[i][pos] = j;
+                    documentVectorList[i][pos++] = count;
+                }
+            }
         });
 
         logger.info("Tworzenie przetworzonych dokumentów");
@@ -137,23 +117,23 @@ public class DocumentService {
             //tworzenie dokumentów dla każdego typu kategorii i dla różnych kategorii wg typu
             documentRaw.getExchanges().stream().forEach(cat -> {
                 documentFilteredMap.get(CategoryType.EXCHANGES).add(new DocumentFiltered(documentRaw.getDocumentType(),
-                        CategoryType.EXCHANGES, cat, documentVectorList[i]));
+                        CategoryType.EXCHANGES, cat, documentVectorList[i], featurePositionList[i]));
             });
             documentRaw.getOrgs().stream().forEach(cat -> {
                 documentFilteredMap.get(CategoryType.ORGS).add(new DocumentFiltered(documentRaw.getDocumentType(),
-                        CategoryType.ORGS, cat, documentVectorList[i]));
+                        CategoryType.ORGS, cat, documentVectorList[i], featurePositionList[i]));
             });
             documentRaw.getPeople().stream().forEach(cat -> {
                 documentFilteredMap.get(CategoryType.PEOPLE).add(new DocumentFiltered(documentRaw.getDocumentType(),
-                        CategoryType.PEOPLE, cat, documentVectorList[i]));
+                        CategoryType.PEOPLE, cat, documentVectorList[i], featurePositionList[i]));
             });
             documentRaw.getPlaces().stream().forEach(cat -> {
                 documentFilteredMap.get(CategoryType.PLACES).add(new DocumentFiltered(documentRaw.getDocumentType(),
-                        CategoryType.PLACES, cat, documentVectorList[i]));
+                        CategoryType.PLACES, cat, documentVectorList[i], featurePositionList[i]));
             });
             documentRaw.getTopics().stream().forEach(cat -> {
                 documentFilteredMap.get(CategoryType.TOPICS).add(new DocumentFiltered(documentRaw.getDocumentType(),
-                        CategoryType.TOPICS, cat, documentVectorList[i]));
+                        CategoryType.TOPICS, cat, documentVectorList[i], featurePositionList[i]));
             });
         });
 

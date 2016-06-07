@@ -101,6 +101,9 @@ public class Parser {
                 .map(i -> Category.PEOPLE.get(i)).collect(Collectors.toList());
 
         List<String> placesStrings = parseCategories(document, "PLACES");
+        if(placesStrings.size() == 0) {
+            return null;
+        }
         List<Integer> placesIds = placesStrings.stream()
                 .map(i -> Category.PLACES.get(i)).collect(Collectors.toList());
 
