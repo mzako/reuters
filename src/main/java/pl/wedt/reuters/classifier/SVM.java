@@ -16,21 +16,16 @@ import java.util.stream.IntStream;
  */
 public class SVM {
     private final static Logger logger = Logger.getLogger(SVM.class);
-    private DocumentService documentService;
     private Model model;
     private double C;
     private double eps;
 
-    public SVM(DocumentService documentService, double C, double eps) {
-        this.documentService = documentService;
+    public SVM(double C, double eps) {
         this.C = C;
         this.eps = eps;
     }
 
-    public void classify2(CategoryType categoryType, List<Integer> categories) {
-        List<DocumentFiltered> documents = documentService.getDocumentFilteredMap()
-                .get(categoryType);
-
+    public void classify2(CategoryType categoryType, List<Integer> categories, List<DocumentFiltered> documents) {
         List<DocumentFiltered> documentsFromCategories = new ArrayList<>();
         categories.stream().forEach(c -> {
             documentsFromCategories.addAll(documents

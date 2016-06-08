@@ -45,9 +45,13 @@ public class Main {
             logger.info("Przetwarzanie dokumentów");
             documentService.prepareDocuments();
             logger.info("Klasyfikacja SVM");
-            SVM svm = new SVM(documentService, Double.valueOf(properties.getProperty("svm.C")),
+            
+            int crossValidationNumParam = Integer.getInteger(properties.getProperty("crossValidation.num"));
+            
+            SVM svm = new SVM(Double.valueOf(properties.getProperty("svm.C")),
                     Double.valueOf(properties.getProperty("svm.eps")));
-            svm.classify2(CategoryType.PLACES, Arrays.asList(161, 158));
+//            svm.classify2(CategoryType.PLACES, Arrays.asList(161, 158), documentService.getTrainingDocuments().get(CategoryType.PLACES));
+            
         } catch(Exception e) {
             e.printStackTrace();
         }

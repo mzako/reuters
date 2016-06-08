@@ -6,6 +6,7 @@ import org.apache.log4j.Logger;
 import pl.wedt.reuters.model.CategoryType;
 import pl.wedt.reuters.model.DocumentFiltered;
 import pl.wedt.reuters.model.DocumentRaw;
+import pl.wedt.reuters.model.DocumentType;
 import pl.wedt.reuters.parser.Parser;
 import pl.wedt.reuters.parser.StopListFilter;
 import pl.wedt.reuters.parser.Tokenizer;
@@ -29,13 +30,9 @@ public class DocumentService {
     private List<String> documentFileNames;
     private List<String> dictionaryVector;
     private List<DocumentRaw> documentRawList;
-    private Map<CategoryType, List<DocumentFiltered>> documentFilteredMap;
+    private Map<CategoryType, List<DocumentFiltered>> testDocuments, trainingDocuments;
 
-    public Map<CategoryType, List<DocumentFiltered>> getDocumentFilteredMap() {
-        return documentFilteredMap;
-    }
-
-    public DocumentService(String resourcesPath, List<String> documentFileNames, String stopListFileName) {
+	public DocumentService(String resourcesPath, List<String> documentFileNames, String stopListFileName) {
     	if (resourcesPath != null && resourcesPath.startsWith("/")) 
     		resourcesPath = resourcesPath.substring(1); 
         this.resourcesPath = resourcesPath;
@@ -95,10 +92,6 @@ public class DocumentService {
         dictionaryVector = new ArrayList<>();
         dictionaryVector.addAll(dictionary);
 
-        //tworzenie oddzielnych list dokumentów dla każdego typu kategorii
-        documentFilteredMap = new HashMap<>();
-        Arrays.stream(CategoryType.values()).forEach(cat -> documentFilteredMap.put(cat, new ArrayList<>()));
-
         logger.info("Normalizacja wektorów częstości");
         //tworzenie wektorów częstości
         double documentVectorList[][] = new double[documentBodyBagOfWordsList.size()][dictionaryVector.size()];
@@ -131,35 +124,84 @@ public class DocumentService {
             });
         });
 
-        logger.info("Tworzenie przetworzonych dokumentów");
-
-        IntStream.range(0, documentVectorList.length).forEach(i -> {
-            DocumentRaw documentRaw = documentRawList.get(i);
-
-            //tworzenie dokumentów dla każdego typu kategorii i dla różnych kategorii wg typu
-            documentRaw.getExchanges().stream().forEach(cat -> {
-                documentFilteredMap.get(CategoryType.EXCHANGES).add(new DocumentFiltered(documentRaw.getDocumentType(),
-                        CategoryType.EXCHANGES, cat, documentVectorList[i]));
-            });
-            documentRaw.getOrgs().stream().forEach(cat -> {
-                documentFilteredMap.get(CategoryType.ORGS).add(new DocumentFiltered(documentRaw.getDocumentType(),
-                        CategoryType.ORGS, cat, documentVectorList[i]));
-            });
-            documentRaw.getPeople().stream().forEach(cat -> {
-                documentFilteredMap.get(CategoryType.PEOPLE).add(new DocumentFiltered(documentRaw.getDocumentType(),
-                        CategoryType.PEOPLE, cat, documentVectorList[i]));
-            });
-            documentRaw.getPlaces().stream().forEach(cat -> {
-                documentFilteredMap.get(CategoryType.PLACES).add(new DocumentFiltered(documentRaw.getDocumentType(),
-                        CategoryType.PLACES, cat, documentVectorList[i]));
-            });
-            documentRaw.getTopics().stream().forEach(cat -> {
-                documentFilteredMap.get(CategoryType.TOPICS).add(new DocumentFiltered(documentRaw.getDocumentType(),
-                        CategoryType.TOPICS, cat, documentVectorList[i]));
-            });
-        });
+        // tworzenie list z treningowymi i testowymi dokumentami, z podziałem na kategorię
+        createFilteredDocumentsLists(documentVectorList);
 
         //te dokumenty nie są już potrzebne
         documentRawList = null;
+         
     }
+
+	private void createFilteredDocumentsLists(double[][] documentVectorList) {
+		logger.info("Tworzenie przetworzonych dokumentów");
+
+        testDocuments = new HashMap<CategoryType, List<DocumentFiltered>>();
+        trainingDocuments = new HashMap<CategoryType, List<DocumentFiltered>>();
+        Arrays.stream(CategoryType.values()).forEach(cat -> testDocuments.put(cat, new ArrayList<DocumentFiltered>()));
+        Arrays.stream(CategoryType.values()).forEach(cat -> trainingDocuments.put(cat, new ArrayList<DocumentFiltered>()));
+        
+        IntStream.range(0, documentVectorList.length).forEach(i -> {
+            DocumentRaw documentRaw = documentRawList.get(i);
+            
+            documentRaw.getExchanges().stream().forEach(cat -> {
+            	addDocumentFiltered(documentRaw.getDocumentType(), CategoryType.EXCHANGES, cat, documentVectorList[i]); 
+            });
+            documentRaw.getOrgs().stream().forEach(cat -> {
+            	addDocumentFiltered(documentRaw.getDocumentType(), CategoryType.ORGS, cat, documentVectorList[i]);
+            });
+            documentRaw.getPeople().stream().forEach(cat -> {
+            	addDocumentFiltered(documentRaw.getDocumentType(), CategoryType.PEOPLE, cat, documentVectorList[i]);
+            });
+            documentRaw.getPlaces().stream().forEach(cat -> {
+            	addDocumentFiltered(documentRaw.getDocumentType(), CategoryType.PLACES, cat, documentVectorList[i]);
+            });
+            documentRaw.getTopics().stream().forEach(cat -> {
+            	addDocumentFiltered(documentRaw.getDocumentType(), CategoryType.TOPICS, cat, documentVectorList[i]);
+            });
+        });
+        
+        Arrays.stream(CategoryType.values()).forEach(cat -> Collections.shuffle(trainingDocuments.get(cat))); 
+	}
+
+    private void addDocumentFiltered(DocumentType documentType, CategoryType categoryType, Integer cat, double[] vector) {
+    	switch (documentType) {
+    	case TEST:
+    			testDocuments.get(categoryType).add(new DocumentFiltered(cat, vector)); 
+    		break; 
+    		
+    	case TRAIN:
+    			trainingDocuments.get(categoryType).add(new DocumentFiltered(cat, vector));
+    		break; 
+    	}
+    }
+    
+	public Map<CategoryType, List<DocumentFiltered>> getTestDocuments() {
+		return testDocuments;
+	}
+	
+	public List<DocumentFiltered> getDocumentToTrain(CategoryType ct, int howManyParts, int partNum) {
+		int idStart = getValidationListStartIndex(trainingDocuments.get(ct).size(), howManyParts, partNum);
+		int idEnd = getValidationListEndIndex(trainingDocuments.get(ct).size(), howManyParts, partNum); 
+		List<DocumentFiltered> ret = trainingDocuments.get(ct).subList(0, idStart); 
+		ret.addAll(trainingDocuments.get(ct).subList(idEnd, trainingDocuments.get(ct).size()));
+		return ret; 
+	}
+	
+	public List<DocumentFiltered> getDocumentsToValidate(CategoryType ct, int howManyParts, int partNum) {
+		int idStart = getValidationListStartIndex(trainingDocuments.get(ct).size(), howManyParts, partNum);
+		int idEnd = getValidationListEndIndex(trainingDocuments.get(ct).size(), howManyParts, partNum);
+		return trainingDocuments.get(ct).subList(idStart, idEnd); 
+	}
+
+	private int getValidationListStartIndex(int listSize, int howManyParts, int partNum) {
+		int mod = listSize % howManyParts; 
+		int div = listSize / howManyParts;
+		return (partNum < mod ? (div+1)*partNum : (div+1)*mod + (partNum-mod)*div); 
+	}
+	
+	private int getValidationListEndIndex(int listSize, int howManyParts, int partNum) {
+		int mod = listSize % howManyParts; 
+		int div = listSize / howManyParts;
+		return (partNum < mod ? (div+1)*(partNum+1) : (div+1)*mod + (partNum-mod+1)*div); 
+	}
 }

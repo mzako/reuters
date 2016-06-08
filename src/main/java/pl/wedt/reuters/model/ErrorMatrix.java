@@ -1,5 +1,10 @@
 package pl.wedt.reuters.model;
 
+/**
+ * 
+ * @author Anna Czajka
+ *
+ */
 public class ErrorMatrix {
 	/*								faktycznie należy 			faktycznie nie należy						
 	 * 

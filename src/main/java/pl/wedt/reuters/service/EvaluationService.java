@@ -9,6 +9,11 @@ import org.apache.log4j.Logger;
 import pl.wedt.reuters.model.CategoryType;
 import pl.wedt.reuters.model.ErrorMatrix;
 
+/**
+ * 
+ * @author Anna Czajka
+ *
+ */
 public class EvaluationService {
 	
 	private final Logger logger = Logger.getLogger(EvaluationService.class);
