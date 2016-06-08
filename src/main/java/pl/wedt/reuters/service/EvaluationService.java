@@ -65,5 +65,20 @@ public class EvaluationService {
 		return map; 
 	}
 	
-	
+    public void evaluate(List<Integer> originalLabels, List<Integer> classificationLabels) {
+        int dontKnows = 0;
+        int errors = 0;
+
+        for(int i = 0; i < originalLabels.size(); i++) {
+            if (classificationLabels.get(i) == -1) {
+                dontKnows++;
+            } else if (!classificationLabels.get(i).equals(originalLabels.get(i))) {
+                errors++;
+            }
+        }
+        logger.info("Poprawne: " + (1.0 - (double) (errors  + dontKnows) / originalLabels.size())
+                + " Błędne: " + (double) errors  / originalLabels.size()
+                + " Odrzucone: " + (double) dontKnows / originalLabels.size());
+    }
+
 }
