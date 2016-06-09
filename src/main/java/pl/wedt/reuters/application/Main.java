@@ -1,9 +1,15 @@
 package pl.wedt.reuters.application;
 
-import de.bwaldvogel.liblinear.SolverType;
-import edu.stanford.nlp.ie.machinereading.structure.MachineReadingAnnotations.DocumentDirectoryAnnotation;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.apache.log4j.Logger;
+
+import de.bwaldvogel.liblinear.SolverType;
 import pl.wedt.reuters.classifier.SVM;
 import pl.wedt.reuters.model.CategoryType;
 import pl.wedt.reuters.model.DocumentFiltered;
@@ -11,14 +17,6 @@ import pl.wedt.reuters.service.DocumentService;
 import pl.wedt.reuters.service.EvaluationService;
 import pl.wedt.reuters.utils.Category;
 import pl.wedt.reuters.utils.PropertiesLoader;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Properties;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 
 /**
@@ -128,12 +126,15 @@ public class Main {
 			List<Integer> ovoResult = svm.clsOVO(trainingList, testList);
 			
 			List<Integer> categoryList = getCategoryList(trainingList, testList); 
+			logger.info("OVA dla " + categoryType + ":");
 			ovaEvaluationService.evaluate(categoryType, expectedResult, ovaResult, categoryList);
+			logger.info("OVO dla " + categoryType + ":");
 			ovoEvaluationService.evaluate(categoryType, expectedResult, ovoResult, categoryList); 
 			
 			logger.info("KONIEC CATEGORY TYPE: " + categoryType); 
     	}
     	
+    	logger.info("EWALUACJA KONCOWA");
     	logger.info("OVA: "); 
     	ovaEvaluationService.evaluateAll();
     	logger.info("OVO: "); 

@@ -4,7 +4,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale.Category;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
@@ -54,6 +53,8 @@ public class EvaluationService {
      * @param categoryList 
      */
 	public void evaluate(CategoryType categoryType, List<Integer> expectedResult, List<Integer> actualResult, List<Integer> categoryList) {
+		evaluate(expectedResult, categoryList);
+		
 		categoryList.forEach(cat -> matrixMap.get(categoryType).put(cat, new ErrorMatrix()));
 		
 		for (int i = 0; i < expectedResult.size(); ++i) {
