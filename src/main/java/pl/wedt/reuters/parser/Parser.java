@@ -74,7 +74,7 @@ public class Parser {
         String topicsAttr = document.getAttributes().getNamedItem("TOPICS").getTextContent();
         String lewissplitAttr = document.getAttributes().getNamedItem("LEWISSPLIT").getTextContent();
         DocumentType documentType;
-
+        
         //Podział na część trenującą i uczącą wg ModApte Split
         if(topicsAttr.equals("YES") && lewissplitAttr.equals("TRAIN")) {
             documentType = DocumentType.TRAIN;

@@ -18,7 +18,6 @@ import de.bwaldvogel.liblinear.Parameter;
 import de.bwaldvogel.liblinear.Problem;
 import de.bwaldvogel.liblinear.SolverType;
 import pl.wedt.reuters.model.DocumentFiltered;
-import pl.wedt.reuters.service.DocumentService;
 
 /**
  * @author Michał Żakowski
@@ -36,6 +35,7 @@ public class SVM {
         this.eps = eps;
         this.dim = dim; 
         this.solver = solver;
+        Linear.disableDebugOutput();
     }
 
     //One versus All SVM
@@ -65,7 +65,7 @@ public class SVM {
                 ;
             });
 
-            logger.info("Trenowanie klasy: " + c);
+            //logger.info("Trenowanie klasy: " + c);
             models.add(train(trainSize, dim, trainNodes, labels, C, eps, solver));
         });
 
@@ -172,7 +172,7 @@ public class SVM {
 
                 }
 
-                logger.info("Trenowanie klas: " + i + " i " + j);
+                //logger.info("Trenowanie klas: " + i + " i " + j);
                 Model model = train(docs.size(), dim, trainNodes, labels, C, eps, solver);
                 ovoModels.add(new OVOModel(i, j, model));
             }
@@ -232,7 +232,7 @@ public class SVM {
         problem.y = labels;
         Parameter parameter = new Parameter(solver, C, eps);
 
-        logger.info("Rozpoczynanie trenowania");
+        //logger.info("Rozpoczynanie trenowania");
         return Linear.train(problem, parameter);
     }
 }

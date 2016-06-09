@@ -49,6 +49,10 @@ public class ErrorMatrix {
 		d++; 
 	}
 	
+	public void setD(int num) {
+		d = num - this.b - this.c + this.a; 
+	}
+	
 	public double getA() {
 		return a;
 	}
@@ -81,6 +85,20 @@ public class ErrorMatrix {
 		return b/(b+d);
 	}
 
+	/**
+	 * Uzupełnia parametry macierzy na podstawie rozmiarów zbiorów. 
+	 * @param a	rozmiar części wspólnej zbiorów: faktycznie należące do kategorii i zakwalifikowane do niej
+	 * @param originalNum liczba faktycznie należących do kategorii
+	 * @param classificationNum 
+	 * @param categoryDocumentNum
+	 */
+	public void setParams(int a, int originalNum, int classificationNum, int categoryDocumentNum) {
+		this.a = a; 													// część wspólna zbiorów
+		this.b = classificationNum - a;
+		this.c = originalNum - a; 
+		this.d = categoryDocumentNum - this.b - this.c + this.a; 
+	}
+	
 	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
@@ -104,19 +122,6 @@ public class ErrorMatrix {
 		return builder.toString();
 	}
 
-	/**
-	 * Uzupełnia parametry macierzy na podstawie rozmiarów zbiorów. 
-	 * @param a	rozmiar części wspólnej zbiorów: faktycznie należące do kategorii i zakwalifikowane do niej
-	 * @param originalNum liczba faktycznie należących do kategorii
-	 * @param classificationNum 
-	 * @param categoryDocumentNum
-	 */
-	public void setParams(int a, int originalNum, int classificationNum, int categoryDocumentNum) {
-		this.a = a; 													// część wspólna zbiorów
-		this.b = classificationNum - a;
-		this.c = originalNum - a; 
-		this.d = categoryDocumentNum - this.b - this.c + this.a; 
-	}
 	
 	
 }

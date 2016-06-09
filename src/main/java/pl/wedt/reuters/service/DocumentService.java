@@ -31,7 +31,7 @@ public class DocumentService {
     private List<String> documentFileNames;
     private List<String> dictionaryVector;
     private List<DocumentRaw> documentRawList;
-    private List<DocumentFiltered> testDocuments, trainingDocuments;
+    private Map<CategoryType, List<DocumentFiltered>> testDocuments, trainingDocuments;
     private int dim;
 
 	public DocumentService(String resourcesPath, List<String> documentFileNames, String stopListFileName) {
@@ -102,7 +102,7 @@ public class DocumentService {
         });
 
         
-        // tworzenie list z treningowymi i testowymi dokumentami, z podziałem na kategorię
+        // tworzenie list z treningowymi i testowymi dokumentami, BEZ PODZIAŁU NA KATEGORIĘ
         createFilteredDocumentsLists(documentVectorList, featurePositionList);
 
         //te dokumenty nie są już potrzebne
@@ -110,14 +110,27 @@ public class DocumentService {
          
     }
 
+    /**
+     * Tworzy listy testDocuments i trainingDocuments, zawierające dokumenty w formie do przetwarzania. 
+     * @param documentVectorList 
+     * @param featurePositionList
+     */
 	private void createFilteredDocumentsLists(double[][] documentVectorList, int featurePositionList[][]) {
 		logger.info("Tworzenie przetworzonych dokumentów");
 
-        testDocuments = new ArrayList<DocumentFiltered>();
-        trainingDocuments = new ArrayList<DocumentFiltered>();
+        testDocuments = new HashMap<CategoryType, List<DocumentFiltered>>();
+        trainingDocuments = new HashMap<CategoryType, List<DocumentFiltered>>();
+        Arrays.stream(CategoryType.values()).forEach(categoryType -> {
+        	testDocuments.put(categoryType, new ArrayList<DocumentFiltered>());
+        	trainingDocuments.put(categoryType, new ArrayList<DocumentFiltered>()); 
+        });
         
         IntStream.range(0, documentVectorList.length).forEach(i -> {
             DocumentRaw documentRaw = documentRawList.get(i);
+            
+//            if (DocumentType.TEST.equals(documentRaw.getDocumentType())) {
+//            	return; 
+//            }
             
             documentRaw.getExchanges().stream().forEach(cat -> {
             	addDocumentFiltered(documentRaw.getDocumentType(), CategoryType.EXCHANGES, cat, documentVectorList[i], featurePositionList[i]);
@@ -136,36 +149,61 @@ public class DocumentService {
             });
         });
         
-        Collections.shuffle(trainingDocuments);
+        // losowo tasujemy dokumenty - dzięki temu przy podziale na 10 wystarczy brać kolejne przedziały
+        Arrays.stream(CategoryType.values()).forEach(categoryType -> Collections.shuffle(trainingDocuments.get(categoryType)));
 	}
 
+	/**
+	 * Dodaje instancję DocumentFiltered o zadanych parametrach na listę testowych bądź treningowych dokumentów, w zależności od documentType.  
+	 * @param documentType typ dokumentu (testowy, treningowy)
+	 * @param categoryType kategoria dokumentu
+	 * @param cat id kategorii dokumentu
+	 * @param vector wektor dokumentu
+	 * @param featurePositionList 
+	 */
     private void addDocumentFiltered(DocumentType documentType, CategoryType categoryType, Integer cat, double[] vector, int[] featurePositionList ) {
     	switch (documentType) {
     	case TEST:
-    			testDocuments.add(new DocumentFiltered(categoryType, cat, vector, featurePositionList)); 
+    			testDocuments.get(categoryType).add(new DocumentFiltered(cat, vector, featurePositionList)); 
     		break; 
     		
     	case TRAIN:
-    			trainingDocuments.add(new DocumentFiltered(categoryType, cat, vector, featurePositionList));
+    			trainingDocuments.get(categoryType).add(new DocumentFiltered(cat, vector, featurePositionList));
     		break; 
     	}
     }
     
-
-	public List<DocumentFiltered> getDocumentToTrain(int howManyParts, int partNum) {
-		int idStart = getValidationListStartIndex(trainingDocuments.size(), howManyParts, partNum);
-		int idEnd = getValidationListEndIndex(trainingDocuments.size(), howManyParts, partNum); 
+    /**
+     * Pobiera listę dokumentów do trenowania w danym przebiegu cross-validacji. 
+     * Razem z listą dokumentów do walidacji z tymi samymi parametrami sumują się do całej listy trainingDocuments.
+     * TrainingDocuments jest ułożona losowo; więc jeśli weźmiemy kolejne przedziały to będzie jak dzielenie 
+     * listy na 10 części. Ta funkcja zwraca "całą resztę" oprócz danego przedziału. 
+     *  
+     * @param runsNumber Liczba przebiegów (prawd. 10)
+     * @param runId Numer tego przebiegu (liczony od 0)
+     * @return lista dokumentów do trenowania w danym przebiegu
+     */
+	public List<DocumentFiltered> getDocumentToTrain(CategoryType categoryType, int runsNumber, int runId) {
+		int idStart = getValidationListStartIndex(trainingDocuments.get(categoryType).size(), runsNumber, runId);
+		int idEnd = getValidationListEndIndex(trainingDocuments.get(categoryType).size(), runsNumber, runId); 
 		List<DocumentFiltered> ret = new ArrayList<DocumentFiltered>();  
-		ret.addAll(trainingDocuments.subList(0, idStart)); 
-		List<DocumentFiltered> ret2 = trainingDocuments.subList(idEnd, trainingDocuments.size()); 
+		ret.addAll(trainingDocuments.get(categoryType).subList(0, idStart)); 
+		List<DocumentFiltered> ret2 = trainingDocuments.get(categoryType).subList(idEnd, trainingDocuments.get(categoryType).size()); 
 		ret.addAll(ret2);
 		return ret; 
 	}
 	
-	public List<DocumentFiltered> getDocumentsToValidate(int howManyParts, int partNum) {
-		int idStart = getValidationListStartIndex(trainingDocuments.size(), howManyParts, partNum);
-		int idEnd = getValidationListEndIndex(trainingDocuments.size(), howManyParts, partNum);
-		return trainingDocuments.subList(idStart, idEnd); 
+	/**
+     * Pobiera listę dokumentów do walidacji w danym przebiegu cross-validacji. 
+     * Razem z listą dokumentów do trenowania z tymi samymi parametrami sumują się do całej listy trainingDocuments.
+     * @param runsNumber Liczba przebiegów (prawd. 10)
+     * @param runId Numer tego przebiegu (liczony od 0)
+     * @return lista dokumentów do walidacji w danym przebiegu
+     */
+	public List<DocumentFiltered> getDocumentsToValidate(CategoryType categoryType, int runsNumber, int runId) {
+		int idStart = getValidationListStartIndex(trainingDocuments.get(categoryType).size(), runsNumber, runId);
+		int idEnd = getValidationListEndIndex(trainingDocuments.get(categoryType).size(), runsNumber, runId);
+		return trainingDocuments.get(categoryType).subList(idStart, idEnd); 
 	}
 
 	private int getValidationListStartIndex(int listSize, int howManyParts, int partNum) {
@@ -186,13 +224,13 @@ public class DocumentService {
     }
 
 
-	public List<DocumentFiltered> getTestDocuments() {
-		return testDocuments;
+	public List<DocumentFiltered> getTestDocuments(CategoryType categoryType) {
+		return testDocuments.get(categoryType);
 	}
 
 
-	public List<DocumentFiltered> getTrainingDocuments() {
-		return trainingDocuments;
+	public List<DocumentFiltered> getTrainingDocuments(CategoryType categoryType) {
+		return trainingDocuments.get(categoryType);
 	}
 
 }
