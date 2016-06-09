@@ -18,9 +18,17 @@ public class EvaluationService {
 	
 	private final Logger logger = Logger.getLogger(EvaluationService.class);
 	
-	public void evaluate(List<Object> documents) {
-		Map<CategoryType, ErrorMatrix> map = getErrorMatrices(documents);
-		ErrorMatrix microAvgMatrix = microAverage(map);  			
+	Map<CategoryType, ErrorMatrix> categoryMatrixMap; 
+	
+	public EvaluationService() {
+		categoryMatrixMap = new HashMap<CategoryType, ErrorMatrix>();
+	}
+	
+	public void evaluate(CategoryType ct, List<Integer> originalLabels, List<Integer> classificationLabels, int categoryDocumentNum) {
+		evaluate(originalLabels, classificationLabels);
+		
+		calculateErrorMatrices(ct, originalLabels, classificationLabels, categoryDocumentNum);
+		ErrorMatrix microAvgMatrix = microAverage(categoryMatrixMap);  			
 		
 		logger.info(microAvgMatrix.toString());
 	}
@@ -38,8 +46,19 @@ public class EvaluationService {
 		return new ErrorMatrix(avgA/catNum, avgB/catNum, avgC/catNum, avgD/catNum); 
 	}
 
-	private Map<CategoryType, ErrorMatrix> getErrorMatrices(List<Object> documents) {
-		Map<CategoryType, ErrorMatrix> map = new HashMap<CategoryType, ErrorMatrix>(); 
+	private void calculateErrorMatrices(CategoryType ct, List<Integer> originalLabels, List<Integer> classificationLabels, int categoryDocumentNum) {
+		
+		
+		 
+		
+		int a = 0; 
+		
+		for (Integer classLabel : classificationLabels) {
+			if (originalLabels.contains(classLabel)) 
+				a++; 
+		}
+		ErrorMatrix em = new ErrorMatrix(); 
+		em.setParams(a, originalLabels.size(), classificationLabels.size(), categoryDocumentNum);
 		
 //		for (Object d : documents) {
 //			for (CategoryType c : CategoryType.values()) {
@@ -62,7 +81,7 @@ public class EvaluationService {
 //			}
 //		}
 			
-		return map; 
+		categoryMatrixMap.put(ct, em);  
 	}
 	
     public void evaluate(List<Integer> originalLabels, List<Integer> classificationLabels) {

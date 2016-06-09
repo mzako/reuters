@@ -32,7 +32,6 @@ public class DocumentService {
     private List<String> dictionaryVector;
     private List<DocumentRaw> documentRawList;
     private Map<CategoryType, List<DocumentFiltered>> testDocuments, trainingDocuments;
-    private Map<CategoryType, List<DocumentFiltered>> documentFilteredMap;
     private int dim;
 
 	public DocumentService(String resourcesPath, List<String> documentFileNames, String stopListFileName) {
@@ -45,10 +44,7 @@ public class DocumentService {
         this.stopListFilter = new StopListFilter(Paths.get(resourcesPath, stopListFileName));
     }
 
-    public int getDim() {
-        return dim;
-    }
-
+    
     //wczytuje dokumenty w postaci nieprzetworzonej
     public void loadDocuments() {
         documentRawList = new ArrayList<>();
@@ -156,15 +152,14 @@ public class DocumentService {
     	}
     }
     
-	public Map<CategoryType, List<DocumentFiltered>> getTestDocuments() {
-		return testDocuments;
-	}
-	
+
 	public List<DocumentFiltered> getDocumentToTrain(CategoryType ct, int howManyParts, int partNum) {
 		int idStart = getValidationListStartIndex(trainingDocuments.get(ct).size(), howManyParts, partNum);
 		int idEnd = getValidationListEndIndex(trainingDocuments.get(ct).size(), howManyParts, partNum); 
-		List<DocumentFiltered> ret = trainingDocuments.get(ct).subList(0, idStart); 
-		ret.addAll(trainingDocuments.get(ct).subList(idEnd, trainingDocuments.get(ct).size()));
+		List<DocumentFiltered> ret = new ArrayList<DocumentFiltered>();  
+		ret.addAll(trainingDocuments.get(ct).subList(0, idStart)); 
+		List<DocumentFiltered> ret2 = trainingDocuments.get(ct).subList(idEnd, trainingDocuments.get(ct).size()); 
+		ret.addAll(ret2);
 		return ret; 
 	}
 	
@@ -185,4 +180,19 @@ public class DocumentService {
 		int div = listSize / howManyParts;
 		return (partNum < mod ? (div+1)*(partNum+1) : (div+1)*mod + (partNum-mod+1)*div); 
 	}
+
+	
+    public int getDim() {
+        return dim;
+    }
+    
+	public Map<CategoryType, List<DocumentFiltered>> getTestDocuments() {
+		return testDocuments;
+	}
+	
+	public Map<CategoryType, List<DocumentFiltered>> getTrainingDocuments() {
+		return trainingDocuments;
+	}
+
+
 }

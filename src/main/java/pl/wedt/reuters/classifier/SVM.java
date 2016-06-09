@@ -26,22 +26,21 @@ import pl.wedt.reuters.service.DocumentService;
 public class SVM {
     private final static Logger logger = Logger.getLogger(SVM.class);
     private Model model;
-    private DocumentService documentService;
     private double C;
     private double eps;
+    private int dim; 
     private SolverType solver;
 
-    public SVM(DocumentService documentService, double C, double eps, SolverType solver) {
-        this.documentService = documentService;
+    public SVM(double C, double eps, int dim, SolverType solver) {
         this.C = C;
         this.eps = eps;
+        this.dim = dim; 
         this.solver = solver;
     }
 
     //One versus All SVM
     public List<Integer> clsOVA(final List<DocumentFiltered> trainSet, final List<DocumentFiltered> testSet) {
         int trainSize = trainSet.size();
-        int dim = documentService.getDim();
         FeatureNode trainNodes[][] = new FeatureNode[trainSize][];
         double labels[] = new double[trainSize];
         List<Model> models = new ArrayList<>();
@@ -138,7 +137,6 @@ public class SVM {
     //One versus One SVM
     public List<Integer> clsOVO(final List<DocumentFiltered> trainSet, final List<DocumentFiltered> testSet) {
         int trainSize = trainSet.size();
-        int dim = documentService.getDim();
         FeatureNode trainNodes[][];
         double labels[] = new double[trainSize];
 

@@ -1,6 +1,8 @@
 package pl.wedt.reuters.application;
 
 import de.bwaldvogel.liblinear.SolverType;
+import edu.stanford.nlp.ie.machinereading.structure.MachineReadingAnnotations.DocumentDirectoryAnnotation;
+
 import org.apache.log4j.Logger;
 import pl.wedt.reuters.classifier.SVM;
 import pl.wedt.reuters.model.CategoryType;
@@ -47,32 +49,34 @@ public class Main {
             logger.info("Przetwarzanie dokumentów");
             documentService.prepareDocuments();
             logger.info("Klasyfikacja SVM");
+  
             
-            int crossValidationNumParam = Integer.getInteger(properties.getProperty("crossValidation.num"));
             
-            SVM svm = new SVM(documentService, Double.valueOf(properties.getProperty("svm.C")),
-                    Double.valueOf(properties.getProperty("svm.eps")), SolverType.L1R_L2LOSS_SVC);
-
-            EvaluationService evaluationService = new EvaluationService();
-
-            List<DocumentFiltered> trainSet = getByCategorySize(documentService, CategoryType.PLACES, 40);
-            List<DocumentFiltered> testSet = trainSet;
-
-            List<Integer> clsLabels = svm.clsOVA(trainSet, testSet);
-            evaluationService.evaluate(testSet.stream().map(d -> d.getCategory()).collect(Collectors.toList()),
-                    clsLabels);
-
-            List<Integer> clsLabels2 = svm.clsOVO(trainSet, testSet);
-            evaluationService.evaluate(testSet.stream().map(d -> d.getCategory()).collect(Collectors.toList()),
-                    clsLabels2);
+            doCategorize(documentService, properties);
+            
+//            SVM svm = new SVM(Double.valueOf(properties.getProperty("svm.C")), Double.valueOf(properties.getProperty("svm.eps")), 
+//            									documentService.getDim(), SolverType.L1R_L2LOSS_SVC);
+//
+//            EvaluationService evaluationService = new EvaluationService();
+//            
+//            List<DocumentFiltered> trainSet = getByCategorySize(documentService, CategoryType.PLACES, 40);
+//            List<DocumentFiltered> testSet = trainSet;
+//
+//            List<Integer> clsLabels = svm.clsOVA(trainSet, testSet);
+//            evaluationService.evaluate(testSet.stream().map(d -> d.getCategory()).collect(Collectors.toList()),
+//                    clsLabels);
+//
+//            List<Integer> clsLabels2 = svm.clsOVO(trainSet, testSet);
+//            evaluationService.evaluate(testSet.stream().map(d -> d.getCategory()).collect(Collectors.toList()),
+//                    clsLabels2);
 
         } catch(Exception e) {
             e.printStackTrace();
         }
     }
-
+    
     private static List<DocumentFiltered> getByCategorySize(DocumentService documentService, CategoryType categoryType, int minSize) {
-        List<DocumentFiltered> docs = null;//documentService.getDocumentFilteredMap().get(categoryType);FIXME
+        List<DocumentFiltered> docs = documentService.getTrainingDocuments().get(categoryType);
         List<Integer> categories = docs.stream().map(d -> d.getCategory()).distinct().collect(Collectors.toList());
 
         List<DocumentFiltered> res = new ArrayList<>();
@@ -85,5 +89,44 @@ public class Main {
         });
 
         return res;
+    }
+    
+    private static void doCategorize(DocumentService documentService, Properties properties) {
+    	int crossValidationNumParam = Integer.parseInt(properties.getProperty("crossValidation.num"));
+    	
+    	SVM svm = new SVM(Double.valueOf(properties.getProperty("svm.C")), Double.valueOf(properties.getProperty("svm.eps")), 
+				documentService.getDim(), SolverType.L1R_L2LOSS_SVC);
+    	
+    	EvaluationService ovaEvaluationService = new EvaluationService(); 
+    	EvaluationService ovoEvaluationService = new EvaluationService(); 
+    	
+    	for (CategoryType ct : CategoryType.values()) {
+
+    		logger.info("Kategoria: " + ct); 
+    		
+    		for (int i = 0; i < crossValidationNumParam; ++i) {
+    			List<DocumentFiltered> trainingList = documentService.getDocumentToTrain(ct, crossValidationNumParam, i); 
+    			List<DocumentFiltered> validationList = documentService.getDocumentsToValidate(ct, crossValidationNumParam, i);
+    			
+    			logger.info("Run #" + i + ", rozmiar zbioru trenującego: " + trainingList.size() + ", rozmiar zbioru walidacji: " + validationList.size());
+    			
+    			List<Integer> ovaResult = svm.clsOVA(trainingList, validationList); 
+    			List<Integer> ovoResult = svm.clsOVO(trainingList, validationList);
+    			ovaEvaluationService.evaluate(validationList.stream().map(d -> d.getCategory()).collect(Collectors.toList()), ovaResult);
+    			ovoEvaluationService.evaluate(validationList.stream().map(d -> d.getCategory()).collect(Collectors.toList()), ovoResult); 
+    		}
+    		List<DocumentFiltered> trainingList = documentService.getTrainingDocuments().get(ct); 
+    		List<DocumentFiltered> testList = documentService.getTestDocuments().get(ct); 
+    		
+    		logger.info("Pełna kategoryzacja; rozmiar zbioru treningowego: " + trainingList.size() + ", rozmiar zbioru testowego: " + testList); 
+    		
+    		List<Integer> ovaResult = svm.clsOVA(trainingList, testList); 
+			List<Integer> ovoResult = svm.clsOVO(trainingList, testList);
+			
+			//ovaEvaluationService.evaluate(ct, testList.stream().map(d -> d.getCategory()).collect(Collectors.toList()), ovaResult);
+			//ovoEvaluationService.evaluate(ct, testList.stream().map(d -> d.getCategory()).collect(Collectors.toList()), ovoResult); 
+    	}
+    	
+    
     }
 }
