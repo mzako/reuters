@@ -8,22 +8,31 @@ import java.util.Arrays;
  * Klasa reprezentująca dokument po przetworzeniu, w postaci wektora częstości słów
  */
 public class DocumentFiltered {
+	private CategoryType categoryType; 
     private Integer category;
     private double vector[];
     private int featurePosition[];
 
-    public Integer getCategory() {
+    
+    
+    public DocumentFiltered(CategoryType categoryType, Integer category, double[] vector, int[] featurePosition) {
+		super();
+		this.categoryType = categoryType;
+		this.category = category;
+		this.vector = vector;
+		this.featurePosition = featurePosition;
+	}
+
+	public CategoryType getCategoryType() {
+		return categoryType;
+	}
+
+	public Integer getCategory() {
         return category;
     }
 
     public double[] getVector() {
         return vector;
-    }
-
-    public DocumentFiltered(Integer category, double[] vector, int featurePosition[]) {
-        this.category = category;
-        this.vector = vector;
-        this.featurePosition = featurePosition;
     }
 
     public int[] getFeaturePosition() {
@@ -33,7 +42,9 @@ public class DocumentFiltered {
 	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
-		builder.append("DocumentFiltered [category=");
+		builder.append("DocumentFiltered [categoryType=");
+		builder.append(categoryType);
+		builder.append(", category=");
 		builder.append(category);
 		builder.append(", vector=");
 		builder.append(Arrays.toString(vector));
@@ -42,4 +53,6 @@ public class DocumentFiltered {
 		builder.append("]");
 		return builder.toString();
 	}
+
+	
 }

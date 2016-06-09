@@ -24,10 +24,10 @@ public class EvaluationService {
 		categoryMatrixMap = new HashMap<CategoryType, ErrorMatrix>();
 	}
 	
-	public void evaluate(CategoryType ct, List<Integer> originalLabels, List<Integer> classificationLabels, int categoryDocumentNum) {
+	public void evaluate(CategoryType ct, List<Integer> originalLabels, List<Integer> classificationLabels, int documentNum) {
 		evaluate(originalLabels, classificationLabels);
 		
-		calculateErrorMatrices(ct, originalLabels, classificationLabels, categoryDocumentNum);
+		calculateErrorMatrices(ct, originalLabels, classificationLabels, documentNum);
 		ErrorMatrix microAvgMatrix = microAverage(categoryMatrixMap);  			
 		
 		logger.info(microAvgMatrix.toString());
@@ -47,12 +47,7 @@ public class EvaluationService {
 	}
 
 	private void calculateErrorMatrices(CategoryType ct, List<Integer> originalLabels, List<Integer> classificationLabels, int categoryDocumentNum) {
-		
-		
-		 
-		
 		int a = 0; 
-		
 		for (Integer classLabel : classificationLabels) {
 			if (originalLabels.contains(classLabel)) 
 				a++; 
@@ -60,27 +55,6 @@ public class EvaluationService {
 		ErrorMatrix em = new ErrorMatrix(); 
 		em.setParams(a, originalLabels.size(), classificationLabels.size(), categoryDocumentNum);
 		
-//		for (Object d : documents) {
-//			for (CategoryType c : CategoryType.values()) {
-//				if (/*d należy do c*/) {
-//					if (/*d zakwalifikowany do c*/) {
-//						map.get(c).incA();
-//					}
-//					else {
-//						map.get(c).incC();
-//					}
-//				}
-//				else {  // d nie należy do c
-//					if (/*d zakwalifikowany do c*/) {
-//						map.get(c).incB();
-//					}
-//					else {
-//						map.get(c).incD();
-//					}
-//				}
-//			}
-//		}
-			
 		categoryMatrixMap.put(ct, em);  
 	}
 	

@@ -49,10 +49,8 @@ public class Main {
             logger.info("Przetwarzanie dokumentów");
             documentService.prepareDocuments();
             logger.info("Klasyfikacja SVM");
-  
             
-            
-            doCategorize(documentService, properties);
+            //doCategorize(documentService, properties);
             
 //            SVM svm = new SVM(Double.valueOf(properties.getProperty("svm.C")), Double.valueOf(properties.getProperty("svm.eps")), 
 //            									documentService.getDim(), SolverType.L1R_L2LOSS_SVC);
@@ -76,7 +74,7 @@ public class Main {
     }
     
     private static List<DocumentFiltered> getByCategorySize(DocumentService documentService, CategoryType categoryType, int minSize) {
-        List<DocumentFiltered> docs = documentService.getTrainingDocuments().get(categoryType);
+        List<DocumentFiltered> docs = documentService.getTrainingDocuments();
         List<Integer> categories = docs.stream().map(d -> d.getCategory()).distinct().collect(Collectors.toList());
 
         List<DocumentFiltered> res = new ArrayList<>();
@@ -100,33 +98,43 @@ public class Main {
     	EvaluationService ovaEvaluationService = new EvaluationService(); 
     	EvaluationService ovoEvaluationService = new EvaluationService(); 
     	
-    	for (CategoryType ct : CategoryType.values()) {
-
-    		logger.info("Kategoria: " + ct); 
+    	for (CategoryType categoryType : CategoryType.values()) {
+    		logger.info("Kategoria: " + categoryType.toString()); 
     		
     		for (int i = 0; i < crossValidationNumParam; ++i) {
-    			List<DocumentFiltered> trainingList = documentService.getDocumentToTrain(ct, crossValidationNumParam, i); 
-    			List<DocumentFiltered> validationList = documentService.getDocumentsToValidate(ct, crossValidationNumParam, i);
+    			List<DocumentFiltered> trainingList = documentService.getDocumentToTrain(crossValidationNumParam, i); 
+    			List<DocumentFiltered> validationList = documentService.getDocumentsToValidate(crossValidationNumParam, i);
+    			List<Integer> expectedResult = getExpectedResult(categoryType, trainingList); 
     			
     			logger.info("Run #" + i + ", rozmiar zbioru trenującego: " + trainingList.size() + ", rozmiar zbioru walidacji: " + validationList.size());
     			
-    			List<Integer> ovaResult = svm.clsOVA(trainingList, validationList); 
+    			List<Integer> ovaResult = svm.clsOVA(trainingList, validationList);		 
     			List<Integer> ovoResult = svm.clsOVO(trainingList, validationList);
-    			ovaEvaluationService.evaluate(validationList.stream().map(d -> d.getCategory()).collect(Collectors.toList()), ovaResult);
-    			ovoEvaluationService.evaluate(validationList.stream().map(d -> d.getCategory()).collect(Collectors.toList()), ovoResult); 
+    			ovaEvaluationService.evaluate(expectedResult, ovaResult);
+    			ovoEvaluationService.evaluate(expectedResult, ovoResult); 
     		}
-    		List<DocumentFiltered> trainingList = documentService.getTrainingDocuments().get(ct); 
-    		List<DocumentFiltered> testList = documentService.getTestDocuments().get(ct); 
+    		List<DocumentFiltered> trainingList = documentService.getTrainingDocuments(); 
+    		List<DocumentFiltered> testList = documentService.getTestDocuments(); 
+    		List<Integer> expectedTrainingListLabels = getExpectedResult(categoryType, trainingList); 
     		
     		logger.info("Pełna kategoryzacja; rozmiar zbioru treningowego: " + trainingList.size() + ", rozmiar zbioru testowego: " + testList); 
     		
     		List<Integer> ovaResult = svm.clsOVA(trainingList, testList); 
 			List<Integer> ovoResult = svm.clsOVO(trainingList, testList);
 			
-			//ovaEvaluationService.evaluate(ct, testList.stream().map(d -> d.getCategory()).collect(Collectors.toList()), ovaResult);
-			//ovoEvaluationService.evaluate(ct, testList.stream().map(d -> d.getCategory()).collect(Collectors.toList()), ovoResult); 
+			ovaEvaluationService.evaluate(categoryType, expectedTrainingListLabels, ovaResult, testList.size());
+			ovoEvaluationService.evaluate(categoryType, expectedTrainingListLabels, ovoResult, testList.size()); 
     	}
-    	
-    
     }
+
+    
+	private static List<Integer> getExpectedResult(CategoryType ct, List<DocumentFiltered> trainingList) {
+		List<Integer> res = new ArrayList<Integer>();
+		for (DocumentFiltered doc : trainingList){
+			if (ct.equals(doc.getCategory()))
+				res.add(doc.getCategory()); 
+		}
+			
+		return res; 
+	}
 }

@@ -31,7 +31,7 @@ public class DocumentService {
     private List<String> documentFileNames;
     private List<String> dictionaryVector;
     private List<DocumentRaw> documentRawList;
-    private Map<CategoryType, List<DocumentFiltered>> testDocuments, trainingDocuments;
+    private List<DocumentFiltered> testDocuments, trainingDocuments;
     private int dim;
 
 	public DocumentService(String resourcesPath, List<String> documentFileNames, String stopListFileName) {
@@ -101,6 +101,7 @@ public class DocumentService {
             }
         });
 
+        
         // tworzenie list z treningowymi i testowymi dokumentami, z podziałem na kategorię
         createFilteredDocumentsLists(documentVectorList, featurePositionList);
 
@@ -112,10 +113,8 @@ public class DocumentService {
 	private void createFilteredDocumentsLists(double[][] documentVectorList, int featurePositionList[][]) {
 		logger.info("Tworzenie przetworzonych dokumentów");
 
-        testDocuments = new HashMap<CategoryType, List<DocumentFiltered>>();
-        trainingDocuments = new HashMap<CategoryType, List<DocumentFiltered>>();
-        Arrays.stream(CategoryType.values()).forEach(cat -> testDocuments.put(cat, new ArrayList<DocumentFiltered>()));
-        Arrays.stream(CategoryType.values()).forEach(cat -> trainingDocuments.put(cat, new ArrayList<DocumentFiltered>()));
+        testDocuments = new ArrayList<DocumentFiltered>();
+        trainingDocuments = new ArrayList<DocumentFiltered>();
         
         IntStream.range(0, documentVectorList.length).forEach(i -> {
             DocumentRaw documentRaw = documentRawList.get(i);
@@ -137,36 +136,36 @@ public class DocumentService {
             });
         });
         
-        Arrays.stream(CategoryType.values()).forEach(cat -> Collections.shuffle(trainingDocuments.get(cat))); 
+        Collections.shuffle(trainingDocuments);
 	}
 
     private void addDocumentFiltered(DocumentType documentType, CategoryType categoryType, Integer cat, double[] vector, int[] featurePositionList ) {
     	switch (documentType) {
     	case TEST:
-    			testDocuments.get(categoryType).add(new DocumentFiltered(cat, vector, featurePositionList)); 
+    			testDocuments.add(new DocumentFiltered(categoryType, cat, vector, featurePositionList)); 
     		break; 
     		
     	case TRAIN:
-    			trainingDocuments.get(categoryType).add(new DocumentFiltered(cat, vector, featurePositionList));
+    			trainingDocuments.add(new DocumentFiltered(categoryType, cat, vector, featurePositionList));
     		break; 
     	}
     }
     
 
-	public List<DocumentFiltered> getDocumentToTrain(CategoryType ct, int howManyParts, int partNum) {
-		int idStart = getValidationListStartIndex(trainingDocuments.get(ct).size(), howManyParts, partNum);
-		int idEnd = getValidationListEndIndex(trainingDocuments.get(ct).size(), howManyParts, partNum); 
+	public List<DocumentFiltered> getDocumentToTrain(int howManyParts, int partNum) {
+		int idStart = getValidationListStartIndex(trainingDocuments.size(), howManyParts, partNum);
+		int idEnd = getValidationListEndIndex(trainingDocuments.size(), howManyParts, partNum); 
 		List<DocumentFiltered> ret = new ArrayList<DocumentFiltered>();  
-		ret.addAll(trainingDocuments.get(ct).subList(0, idStart)); 
-		List<DocumentFiltered> ret2 = trainingDocuments.get(ct).subList(idEnd, trainingDocuments.get(ct).size()); 
+		ret.addAll(trainingDocuments.subList(0, idStart)); 
+		List<DocumentFiltered> ret2 = trainingDocuments.subList(idEnd, trainingDocuments.size()); 
 		ret.addAll(ret2);
 		return ret; 
 	}
 	
-	public List<DocumentFiltered> getDocumentsToValidate(CategoryType ct, int howManyParts, int partNum) {
-		int idStart = getValidationListStartIndex(trainingDocuments.get(ct).size(), howManyParts, partNum);
-		int idEnd = getValidationListEndIndex(trainingDocuments.get(ct).size(), howManyParts, partNum);
-		return trainingDocuments.get(ct).subList(idStart, idEnd); 
+	public List<DocumentFiltered> getDocumentsToValidate(int howManyParts, int partNum) {
+		int idStart = getValidationListStartIndex(trainingDocuments.size(), howManyParts, partNum);
+		int idEnd = getValidationListEndIndex(trainingDocuments.size(), howManyParts, partNum);
+		return trainingDocuments.subList(idStart, idEnd); 
 	}
 
 	private int getValidationListStartIndex(int listSize, int howManyParts, int partNum) {
@@ -185,14 +184,15 @@ public class DocumentService {
     public int getDim() {
         return dim;
     }
-    
-	public Map<CategoryType, List<DocumentFiltered>> getTestDocuments() {
+
+
+	public List<DocumentFiltered> getTestDocuments() {
 		return testDocuments;
 	}
-	
-	public Map<CategoryType, List<DocumentFiltered>> getTrainingDocuments() {
+
+
+	public List<DocumentFiltered> getTrainingDocuments() {
 		return trainingDocuments;
 	}
-
 
 }
