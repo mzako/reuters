@@ -35,8 +35,8 @@ public class DocumentService {
     private int dim;
 
 	public DocumentService(String resourcesPath, List<String> documentFileNames, String stopListFileName) {
-    	if (resourcesPath != null && resourcesPath.startsWith("/")) 
-    		resourcesPath = resourcesPath.substring(1); 
+    	if (resourcesPath != null && resourcesPath.startsWith("/"))
+    		resourcesPath = resourcesPath.substring(1);
         this.resourcesPath = resourcesPath;
         this.documentFileNames = documentFileNames;
         this.parser = new Parser();
@@ -92,16 +92,21 @@ public class DocumentService {
             documentVectorList[i] = new double[nonZeros];
             featurePositionList[i] = new int[nonZeros];
             int pos = 0;
+            double mod = 0;
             for(int j = 0; j < dictionaryVector.size(); j++) {
                 int count = bagOfWords.count(dictionaryVector.get(j));
                 if(count != 0) {
                     featurePositionList[i][pos] = j;
                     documentVectorList[i][pos++] = count;
+                    mod += count * count;
                 }
+            }
+            mod = Math.sqrt(mod);
+            for(int j = 0; j < documentVectorList[i].length; j++) {
+                documentVectorList[i][j] = documentVectorList[i][j] / mod;
             }
         });
 
-        
         // tworzenie list z treningowymi i testowymi dokumentami, BEZ PODZIAŁU NA KATEGORIĘ
         createFilteredDocumentsLists(documentVectorList, featurePositionList);
 
@@ -127,10 +132,6 @@ public class DocumentService {
         
         IntStream.range(0, documentVectorList.length).forEach(i -> {
             DocumentRaw documentRaw = documentRawList.get(i);
-            
-//            if (DocumentType.TEST.equals(documentRaw.getDocumentType())) {
-//            	return; 
-//            }
             
             documentRaw.getExchanges().stream().forEach(cat -> {
             	addDocumentFiltered(documentRaw.getDocumentType(), CategoryType.EXCHANGES, cat, documentVectorList[i], featurePositionList[i]);

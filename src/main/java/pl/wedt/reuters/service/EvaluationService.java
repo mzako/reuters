@@ -53,7 +53,7 @@ public class EvaluationService {
      * @param categoryList 
      */
 	public void evaluate(CategoryType categoryType, List<Integer> expectedResult, List<Integer> actualResult, List<Integer> categoryList) {
-		evaluate(expectedResult, categoryList);
+		evaluate(expectedResult, actualResult);
 		
 		categoryList.forEach(cat -> matrixMap.get(categoryType).put(cat, new ErrorMatrix()));
 		

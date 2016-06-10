@@ -44,7 +44,8 @@ public class Category {
 
     private static void fill(String path, String filename, Map<String, Integer> map) throws IOException {
     	if (path != null && path.startsWith("/"))
-    		path = path.substring(1); 
+    		path = path.substring(1);
+
         List<String> names = Files.readAllLines(Paths.get(path, filename));
         IntStream.range(0, names.size()).forEach(i -> map.put(names.get(i), i));
     }

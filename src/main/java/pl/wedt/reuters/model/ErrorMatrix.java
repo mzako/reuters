@@ -121,7 +121,4 @@ public class ErrorMatrix {
 		builder.append("]");
 		return builder.toString();
 	}
-
-	
-	
 }

@@ -52,7 +52,7 @@ public class Main {
             logger.info("Przetwarzanie dokumentów");
             documentService.prepareDocuments();
             logger.info("Klasyfikacja SVM");
-            
+
             doCategorize(documentService, properties);
             
 //            SVM svm = new SVM(Double.valueOf(properties.getProperty("svm.C")), Double.valueOf(properties.getProperty("svm.eps")), 
